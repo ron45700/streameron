@@ -68,7 +68,22 @@ The compose file already has a commented-out `gluetun` service at the bottom, an
 
 No restructuring needed — it's a copy/uncomment job.
 
+## Stage 3 — Sonarr + Radarr
+
+Sonarr (TV) and Radarr (movies) track what you want and pull it in automatically via Prowlarr +
+qBittorrent, instead of searching manually. They share the exact same `/media` and `/downloads`
+container paths as qbittorrent/jellyfin on purpose, so a finished download can be hardlinked
+straight into the library (same file, no duplicate copy on disk).
+
+- Sonarr Web UI: `http://localhost:8989`
+- Radarr Web UI: `http://localhost:7878`
+
+Setup order: create an account on first login for each, connect qBittorrent as the download
+client (host: `qbittorrent`, port `8080` — same as we did in Prowlarr), then connect each to
+Prowlarr under Settings -> Apps so they inherit all configured indexers automatically. Finally
+point each at its media folder (`/media/shows` for Sonarr, `/media/movies` for Radarr) as a Root
+Folder.
+
 ## Next stages (not yet in this repo)
 
-3. Sonarr + Radarr — wired to Prowlarr and qBittorrent.
 4. Seerr + Bazarr + Recyclarr — request UI, subtitles, quality profile sync.

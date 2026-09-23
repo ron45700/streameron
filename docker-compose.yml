@@ -60,6 +60,39 @@ services:
       - "8191:8191"
     restart: unless-stopped
 
+  # Same /media and /downloads paths as qbittorrent and jellyfin use — this is
+  # what lets Sonarr hardlink a finished download straight into the library
+  # instead of copying it (same files, no wasted disk space).
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DATA_ROOT}/appdata/sonarr:/config
+      - ${DATA_ROOT}/media:/media
+      - ${DATA_ROOT}/torrents:/downloads
+    ports:
+      - "8989:8989"
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DATA_ROOT}/appdata/radarr:/config
+      - ${DATA_ROOT}/media:/media
+      - ${DATA_ROOT}/torrents:/downloads
+    ports:
+      - "7878:7878"
+    restart: unless-stopped
+
 # ============================================================
 # VPN (optional, currently disabled)
 #

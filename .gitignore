@@ -1,5 +1,6 @@
 .env
 appdata/
 media/
+torrents/
 *.log
 .DS_Store
