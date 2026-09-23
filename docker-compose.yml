@@ -1,0 +1,94 @@
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DATA_ROOT}/appdata/jellyfin:/config
+      - ${DATA_ROOT}/media:/media
+    ports:
+      - "8096:8096"   # Web UI / HTTP streaming
+      - "8920:8920"   # HTTPS streaming (optional, not configured yet)
+      - "7359:7359/udp"  # Network discovery
+      - "1900:1900/udp"  # DLNA discovery
+    restart: unless-stopped
+
+  # Currently NOT routed through a VPN — see the commented "VPN (optional)"
+  # block at the bottom of this file for how to add Gluetun later.
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${DATA_ROOT}/appdata/qbittorrent:/config
+      - ${DATA_ROOT}/torrents:/downloads
+    restart: unless-stopped
+
+  # Not routed through the VPN on purpose: it only makes normal HTTPS
+  # requests to indexer sites, it never joins a torrent swarm.
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DATA_ROOT}/appdata/prowlarr:/config
+    ports:
+      - "9696:9696"
+    restart: unless-stopped
+
+  # Helper browser Prowlarr calls when an indexer is behind Cloudflare.
+  # No volumes needed — it holds no persistent state of its own.
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=${TZ}
+    ports:
+      - "8191:8191"
+    restart: unless-stopped
+
+# ============================================================
+# VPN (optional, currently disabled)
+#
+# To enable later:
+#   1. Uncomment the "gluetun" service below.
+#   2. On the qbittorrent service above:
+#        - delete its "ports:" block entirely (the port moves to gluetun)
+#        - add:  network_mode: "service:gluetun"
+#        - add:  depends_on: [gluetun]
+#   3. Fill OPENVPN_USER / OPENVPN_PASSWORD in .env (already scaffolded
+#      there — see .env.example for where to get them from CyberGhost).
+#   4. docker compose up -d
+#
+#  gluetun:
+#    image: qmcgaw/gluetun:latest
+#    container_name: gluetun
+#    cap_add:
+#      - NET_ADMIN
+#    devices:
+#      - /dev/net/tun:/dev/net/tun
+#    environment:
+#      - VPN_SERVICE_PROVIDER=cyberghost
+#      - VPN_TYPE=openvpn
+#      - OPENVPN_USER=${OPENVPN_USER}
+#      - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
+#      - TZ=${TZ}
+#    ports:
+#      - "8080:8080"   # qBittorrent Web UI (moves here once enabled)
+#    volumes:
+#      - ${DATA_ROOT}/appdata/gluetun:/gluetun
+#    restart: unless-stopped
+# ============================================================
