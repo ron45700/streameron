@@ -46,7 +46,7 @@ with Quick Sync is needed.
    ```
 
 4. Run the setup wizard, then add a library pointing at `/media` (inside the container —
-   this maps to `${DATA_ROOT}/media` on the host).
+   this maps to `${MEDIA_ROOT}/media` on the host).
 
 5. Drop a test video file (ideally a mix: a plain 1080p H.264 file and, if you have one, a
    4K HEVC file) into `data/media/` and let Jellyfin scan.
@@ -57,8 +57,8 @@ with Quick Sync is needed.
 
 ### Notes
 
-- `DATA_ROOT` defaults to `./data` (a local folder next to the compose file) for laptop testing.
-  On the real host this will point at the external HDD mount instead — nothing else changes.
+- Host paths come from `CONFIG_ROOT` and `MEDIA_ROOT` in `.env` (see Stage 5 — originally a
+  single `DATA_ROOT`).
 - `.env` and everything under `data/` are git-ignored on purpose: secrets and large/local media
   never belong in the repo.
 
@@ -102,13 +102,48 @@ Sonarr/Radarr (both marked as the default server for their type — required, or
 processed). Bazarr is connected to Sonarr/Radarr and configured with Wizdom + Ktuvit (Hebrew) and
 OpenSubtitles.com (English), verified working end-to-end including on the TV apps. Recyclarr syncs
 the `web-1080p` (Sonarr) and `hd-bluray-web` (Radarr) TRaSH Guide profiles daily; its per-instance
-configs live in `data/appdata/recyclarr/configs/`, referencing `SONARR_API_KEY` / `RADARR_API_KEY`
+configs live in `${CONFIG_ROOT}/recyclarr/configs/`, referencing `SONARR_API_KEY` / `RADARR_API_KEY`
 from `.env` via `!env_var`.
 
 Note: requesting a season through Seerr triggers an immediate search for every monitored episode
 in that season, which can grab a season-pack release instead of a single episode. For a
 single-episode test, add the series directly in Sonarr/Radarr with Monitor set to None, then
 monitor and Interactive-Search just the one episode.
+
+## Stage 5 — Split config and media roots (laptop → desktop)
+
+**Before (laptop, Stages 1–4):** one `DATA_ROOT=./data` in `.env` held everything —
+`data/appdata/<app>` (config), `data/media` (library), `data/torrents` (downloads).
+
+**Now:** two variables, so config sits on the fast drive and media on the big one:
+
+| Variable | Holds | Laptop | Desktop |
+|---|---|---|---|
+| `CONFIG_ROOT` | `<app>/` config + databases | `./data/appdata` | `./data/appdata` (SSD, inside the repo) |
+| `MEDIA_ROOT` | `media/{shows,movies}` + `torrents/` | `./data` | `D:/streameron` (HDD) |
+
+Only host paths changed — container paths (`/config`, `/media`, `/downloads`) are identical, so
+every app setting, root folder and connection carries over untouched. On the laptop the new
+values resolve to exactly the old folders.
+
+### Moving to a new host
+
+1. Old host: in qBittorrent remove all torrents (keep files); in Sonarr/Radarr remove or
+   unmonitor test items whose files won't be moved; then `docker compose down` (never copy
+   the SQLite databases while apps are running).
+2. New host: `git clone`, create `.env` from `.env.example`, set `CONFIG_ROOT`/`MEDIA_ROOT`,
+   copy `SONARR_API_KEY`/`RADARR_API_KEY` from the old `.env`.
+3. Copy only the old `CONFIG_ROOT` folder to the new `CONFIG_ROOT`. Media is not copied.
+4. Create `media/shows`, `media/movies`, `torrents` under `MEDIA_ROOT`; `docker compose up -d`.
+5. Pre-existing media: place as `media/shows/<Show (Year)>/Season 01/...`, then in Sonarr
+   Series → Library Import → `/media/shows` (Radarr: Movies → Library Import) so they're
+   tracked, not re-downloaded. Then Jellyfin → Scan All Libraries.
+6. Re-add the server on the TVs with the new host's LAN IP (reserve it in the router); update
+   any external Jellyfin URL in Seerr; allow Docker in Windows Firewall; disable sleep.
+
+Known caveat: Docker Desktop on Windows likely can't hardlink between `/downloads` and
+`/media`, so Sonarr/Radarr copy instead — a finished download takes double space while it
+stays in qBittorrent.
 
 ## Not yet implemented
 

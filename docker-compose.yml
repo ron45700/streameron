@@ -7,8 +7,8 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ${DATA_ROOT}/appdata/jellyfin:/config
-      - ${DATA_ROOT}/media:/media
+      - ${CONFIG_ROOT}/jellyfin:/config
+      - ${MEDIA_ROOT}/media:/media
     ports:
       - "8096:8096"   # Web UI / HTTP streaming
       - "8920:8920"   # HTTPS streaming (optional, not configured yet)
@@ -29,8 +29,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ${DATA_ROOT}/appdata/qbittorrent:/config
-      - ${DATA_ROOT}/torrents:/downloads
+      - ${CONFIG_ROOT}/qbittorrent:/config
+      - ${MEDIA_ROOT}/torrents:/downloads
     restart: unless-stopped
 
   # Not routed through the VPN on purpose: it only makes normal HTTPS
@@ -43,7 +43,7 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ${DATA_ROOT}/appdata/prowlarr:/config
+      - ${CONFIG_ROOT}/prowlarr:/config
     ports:
       - "9696:9696"
     restart: unless-stopped
@@ -71,9 +71,9 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ${DATA_ROOT}/appdata/sonarr:/config
-      - ${DATA_ROOT}/media:/media
-      - ${DATA_ROOT}/torrents:/downloads
+      - ${CONFIG_ROOT}/sonarr:/config
+      - ${MEDIA_ROOT}/media:/media
+      - ${MEDIA_ROOT}/torrents:/downloads
     ports:
       - "8989:8989"
     restart: unless-stopped
@@ -86,9 +86,9 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ${DATA_ROOT}/appdata/radarr:/config
-      - ${DATA_ROOT}/media:/media
-      - ${DATA_ROOT}/torrents:/downloads
+      - ${CONFIG_ROOT}/radarr:/config
+      - ${MEDIA_ROOT}/media:/media
+      - ${MEDIA_ROOT}/torrents:/downloads
     ports:
       - "7878:7878"
     restart: unless-stopped
@@ -103,7 +103,7 @@ services:
       - LOG_LEVEL=info
       - TZ=${TZ}
     volumes:
-      - ${DATA_ROOT}/appdata/seerr:/app/config
+      - ${CONFIG_ROOT}/seerr:/app/config
     ports:
       - "5055:5055"
     restart: unless-stopped
@@ -118,8 +118,8 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ${DATA_ROOT}/appdata/bazarr:/config
-      - ${DATA_ROOT}/media:/media
+      - ${CONFIG_ROOT}/bazarr:/config
+      - ${MEDIA_ROOT}/media:/media
     ports:
       - "6767:6767"
     restart: unless-stopped
@@ -136,7 +136,7 @@ services:
       - SONARR_API_KEY=${SONARR_API_KEY}
       - RADARR_API_KEY=${RADARR_API_KEY}
     volumes:
-      - ${DATA_ROOT}/appdata/recyclarr:/config
+      - ${CONFIG_ROOT}/recyclarr:/config
     restart: unless-stopped
 
 # ============================================================
@@ -168,6 +168,6 @@ services:
 #    ports:
 #      - "8080:8080"   # qBittorrent Web UI (moves here once enabled)
 #    volumes:
-#      - ${DATA_ROOT}/appdata/gluetun:/gluetun
+#      - ${CONFIG_ROOT}/gluetun:/gluetun
 #    restart: unless-stopped
 # ============================================================
