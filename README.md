@@ -86,4 +86,6 @@ Folder.
 
 ## Next stages (not yet in this repo)
 
-4. Seerr + Bazarr + Recyclarr — request UI, subtitles, quality profile sync.
+4. Seerr + Bazarr + Recyclarr — request UI, subtitles, quality profile sync. **Done** (2026-09-26): connected and verified end-to-end, including Hebrew + English subtitles.
+5. Tailscale — remote access to Seerr (and everything else) from outside the home network, without opening router ports.
+6. Maintainerr — rule-based auto-cleanup: delete/unmonitor watched or stale media across Jellyfin + Sonarr/Radarr + Seerr, with a grace period before deletion.
