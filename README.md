@@ -2,8 +2,25 @@
 
 Self-hosted home media server. Request from phone → auto-download → auto-organize → watch on TV.
 
-Full architecture and component list live in project notes (see chat history) — this README only
-covers running what's currently in the repo.
+## Components
+
+| Tool | Role | Address |
+|---|---|---|
+| Jellyfin | Media server — streams the library to the TVs and phone | http://localhost:8096 |
+| Seerr | Request UI — search and request from your phone; feeds Sonarr/Radarr | http://localhost:5055 |
+| Sonarr | Tracks TV shows you want and auto-grabs missing episodes | http://localhost:8989 |
+| Radarr | Same as Sonarr, for movies | http://localhost:7878 |
+| Bazarr | Downloads subtitles (Hebrew + English) for anything Sonarr/Radarr import | http://localhost:6767 |
+| Prowlarr | Single place to manage indexer sources for Sonarr/Radarr | http://localhost:9696 |
+| qBittorrent | Downloads the actual files | http://localhost:8080 |
+| FlareSolverr | Helper Prowlarr calls for indexers behind Cloudflare | http://localhost:8191 (API only, nothing to browse to) |
+| Recyclarr | Keeps Sonarr/Radarr quality profiles in sync with TRaSH Guides | no web UI — runs on a daily schedule |
+
+Addresses above are for the laptop. On the phone/TV, replace `localhost` with the host machine's
+LAN IP (find it with `ipconfig`).
+
+Full architecture and reasoning live in project notes (see chat history) — this README covers
+running what's currently in the repo.
 
 ## Stage 1 — Jellyfin only
 
@@ -51,9 +68,6 @@ qBittorrent runs directly on the LAN for now (no VPN) — a deliberate, revisita
 oversight. Prowlarr manages indexers and is never routed through a VPN regardless (it only makes
 normal HTTPS requests, it never joins a torrent swarm).
 
-- qBittorrent Web UI: `http://localhost:8080`
-- Prowlarr Web UI: `http://localhost:9696`
-
 ### Adding a VPN later (Gluetun)
 
 The compose file already has a commented-out `gluetun` service at the bottom, and `.env` /
@@ -75,17 +89,30 @@ qBittorrent, instead of searching manually. They share the exact same `/media` a
 container paths as qbittorrent/jellyfin on purpose, so a finished download can be hardlinked
 straight into the library (same file, no duplicate copy on disk).
 
-- Sonarr Web UI: `http://localhost:8989`
-- Radarr Web UI: `http://localhost:7878`
-
 Setup order: create an account on first login for each, connect qBittorrent as the download
 client (host: `qbittorrent`, port `8080` — same as we did in Prowlarr), then connect each to
 Prowlarr under Settings -> Apps so they inherit all configured indexers automatically. Finally
 point each at its media folder (`/media/shows` for Sonarr, `/media/movies` for Radarr) as a Root
 Folder.
 
-## Next stages (not yet in this repo)
+## Stage 4 — Seerr + Bazarr + Recyclarr
 
-4. Seerr + Bazarr + Recyclarr — request UI, subtitles, quality profile sync. **Done** (2026-09-26): connected and verified end-to-end, including Hebrew + English subtitles.
-5. Tailscale — remote access to Seerr (and everything else) from outside the home network, without opening router ports.
-6. Maintainerr — rule-based auto-cleanup: delete/unmonitor watched or stale media across Jellyfin + Sonarr/Radarr + Seerr, with a grace period before deletion.
+Done (2026-09-26). Seerr is the request UI, connected to Jellyfin (as the media server) and to
+Sonarr/Radarr (both marked as the default server for their type — required, or requests never get
+processed). Bazarr is connected to Sonarr/Radarr and configured with Wizdom + Ktuvit (Hebrew) and
+OpenSubtitles.com (English), verified working end-to-end including on the TV apps. Recyclarr syncs
+the `web-1080p` (Sonarr) and `hd-bluray-web` (Radarr) TRaSH Guide profiles daily; its per-instance
+configs live in `data/appdata/recyclarr/configs/`, referencing `SONARR_API_KEY` / `RADARR_API_KEY`
+from `.env` via `!env_var`.
+
+Note: requesting a season through Seerr triggers an immediate search for every monitored episode
+in that season, which can grab a season-pack release instead of a single episode. For a
+single-episode test, add the series directly in Sonarr/Radarr with Monitor set to None, then
+monitor and Interactive-Search just the one episode.
+
+## Not yet implemented
+
+- **Tailscale** — remote access to Seerr (and everything else) from outside the home network,
+  without opening router ports.
+- **Maintainerr** — rule-based auto-cleanup: delete/unmonitor watched or stale media across
+  Jellyfin + Sonarr/Radarr + Seerr, with a grace period before deletion.
