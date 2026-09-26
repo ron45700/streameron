@@ -93,6 +93,52 @@ services:
       - "7878:7878"
     restart: unless-stopped
 
+  # Request UI (Overseerr/Jellyseerr's successor project). Rootless image —
+  # no PUID/PGID support, unlike the linuxserver.io images above.
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    init: true
+    container_name: seerr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=${TZ}
+    volumes:
+      - ${DATA_ROOT}/appdata/seerr:/app/config
+    ports:
+      - "5055:5055"
+    restart: unless-stopped
+
+  # Downloads subtitles for anything Sonarr/Radarr import. Needs /media
+  # (same path as everything else) to find the video files.
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DATA_ROOT}/appdata/bazarr:/config
+      - ${DATA_ROOT}/media:/media
+    ports:
+      - "6767:6767"
+    restart: unless-stopped
+
+  # No web UI. Reads /config/recyclarr.yml and syncs TRaSH Guide quality
+  # profiles into Sonarr/Radarr once a day (CRON_SCHEDULE default: @daily).
+  # recyclarr.yml doesn't exist yet on the first run — see README for the
+  # one-time setup command.
+  recyclarr:
+    image: ghcr.io/recyclarr/recyclarr:8
+    container_name: recyclarr
+    environment:
+      - TZ=${TZ}
+      - SONARR_API_KEY=${SONARR_API_KEY}
+      - RADARR_API_KEY=${RADARR_API_KEY}
+    volumes:
+      - ${DATA_ROOT}/appdata/recyclarr:/config
+    restart: unless-stopped
+
 # ============================================================
 # VPN (optional, currently disabled)
 #
