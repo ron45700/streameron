@@ -145,9 +145,51 @@ Known caveat: Docker Desktop on Windows likely can't hardlink between `/download
 `/media`, so Sonarr/Radarr copy instead — a finished download takes double space while it
 stays in qBittorrent.
 
+## Stage 6 — Tailscale (remote access)
+
+No router ports opened. Two separate machines in the tailnet, with different reach:
+
+| Tailnet machine | What it is | Reaches | Who uses it |
+|---|---|---|---|
+| `jellyfin` | the `tailscale` container in this compose file | **only** Jellyfin, via `https://jellyfin.<tailnet>.ts.net` | friends (shared with them) + me |
+| the host PC | Tailscale Windows app on the host | every service (`http://<host>:5055`, `:8989`, ...) | only me |
+
+Friends get the `jellyfin` machine via **Share** (admin console), never an invite to the tailnet —
+a share gives access to that one machine and nothing else, and that machine only serves Jellyfin
+(`tailscale/serve.json`). Inside Jellyfin they get a normal non-admin user limited to chosen
+libraries. No Seerr account.
+
+Jellyfin sees these requests as coming from the `tailscale` container's Docker IP (a private
+address), so `EnableRemoteAccess=false` in Jellyfin's network settings does not block them and
+needs no change.
+
+### One-time setup (admin console)
+
+1. DNS page: enable **MagicDNS**, then **HTTPS Certificates** (needed for the `https://` name).
+2. Keys page: generate an auth key (not reusable, not ephemeral), put it in `.env` as `TS_AUTHKEY`.
+3. `docker compose up -d tailscale`, then check `docker logs tailscale` and that `jellyfin`
+   appears on the Machines page.
+4. Machines page → `jellyfin` → **Disable key expiry** (otherwise it logs out after the expiry
+   period and friends lose access silently).
+5. Install the Tailscale Windows app on the host and sign in with the same account (my own access).
+6. Jellyfin → Dashboard → Users → add a user per friend: not administrator, no deletion, only the
+   wanted libraries.
+7. Later: Machines → `jellyfin` → Share → invite each friend (they need a free Tailscale account).
+
+### Moving hosts
+
+`${CONFIG_ROOT}/tailscale/` is the machine's identity (private key — treat as a secret, never
+commit). Copy it to the new host together with the rest of `CONFIG_ROOT` and the machine keeps
+its name and shares. Never run the same state on two hosts at once — stop the old one first.
+The Jellyfin users live in Jellyfin's database; create them on the host that's actually in use
+rather than overwriting its database.
+
+### Checking stream quality
+
+`docker exec tailscale tailscale status` — a friend's device should show `direct`, not
+`relay "..."`. Relayed (DERP) connections are slower and can stutter on high-bitrate files.
+
 ## Not yet implemented
 
-- **Tailscale** — remote access to Seerr (and everything else) from outside the home network,
-  without opening router ports.
 - **Maintainerr** — rule-based auto-cleanup: delete/unmonitor watched or stale media across
   Jellyfin + Sonarr/Radarr + Seerr, with a grace period before deletion.

@@ -139,6 +139,32 @@ services:
       - ${CONFIG_ROOT}/recyclarr:/config
     restart: unless-stopped
 
+  # Remote access for outside the home network. Joins the tailnet as its own
+  # machine named "jellyfin" and serves ONLY Jellyfin (HTTPS on 443, see
+  # tailscale/serve.json). This machine is what gets shared with friends, so
+  # nothing else in the stack is reachable to them. Your own full remote access
+  # comes from the Tailscale Windows app on the host, not from this container.
+  #
+  # No container "hostname:" on purpose: it would make the name "jellyfin"
+  # resolve to this container itself, and the proxy would loop back into it.
+  # The tailnet name comes from TS_HOSTNAME instead.
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_AUTH_ONCE=true            # use the key only on first login; state keeps it logged in after
+      - TS_HOSTNAME=jellyfin         # name in the tailnet -> https://jellyfin.<tailnet>.ts.net
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve.json
+      - TS_USERSPACE=true            # no /dev/net/tun needed; works on Docker Desktop
+    volumes:
+      - ${CONFIG_ROOT}/tailscale:/var/lib/tailscale   # node identity (secret, not in git)
+      - ./tailscale:/config:ro                        # serve.json (in git); mounted as a dir so edits are picked up
+    depends_on:
+      - jellyfin
+    restart: unless-stopped
+
 # ============================================================
 # VPN (optional, currently disabled)
 #
