@@ -165,6 +165,38 @@ services:
       - jellyfin
     restart: unless-stopped
 
+  homarr:
+    image: ghcr.io/ajnart/homarr:latest
+    container_name: homarr
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # מאפשר ל-Homarr לקרוא סטטוס של קונטיינרים
+      - ${CONFIG_ROOT}/homarr/configs:/app/data/configs
+      - ${CONFIG_ROOT}/homarr/icons:/app/public/icons
+      - ${CONFIG_ROOT}/homarr/data:/data
+    ports:
+      - "7575:7575"
+    restart: unless-stopped
+
+  # חיבור Tailscale נפרד לדשבורד, יופיע ברשת כ-"dashboard"
+  tailscale-homarr:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-homarr
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}     # ודא שהמפתח ב-.env מוגדר כ-Reusable כדי לשמש מספר מכונות
+      - TS_AUTH_ONCE=true
+      - TS_HOSTNAME=dashboard        # ה-URL בו תשתמש: https://dashboard.<tailnet>.ts.net
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve.json
+      - TS_USERSPACE=true
+    volumes:
+      - ${CONFIG_ROOT}/tailscale-homarr:/var/lib/tailscale   # שמירת זהות המכונה החדשה
+      - ./tailscale-homarr:/config:ro                        # תיקייה חדשה לקובץ הניתוב של הדשבורד
+    depends_on:
+      - homarr
+    restart: unless-stopped
+
 # ============================================================
 # VPN (optional, currently disabled)
 #
